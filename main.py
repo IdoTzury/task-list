@@ -1,14 +1,21 @@
-from fastapi import FastAPI, HTTPException
-
+from fastapi import FastAPI, HTTPException, status, Query
+from pydantic import BaseModel, Field
 app = FastAPI()
 
 # "מסד נתונים" בזיכרון
 tasks = []
 counter = 1
 
+class Task(BaseModel):
+    title: str
+    owner: str
+    priority: int = Field(default=2, ge=1, le=3)
 @app.get("/tasks")
-def get_tasks():
+def get_tasks(priority: int | None = Query(default = None, ge=1, le=3)):
+    if priority is not None:
+        return [task for task in tasks if task["priority"] == priority] # List Comprehension
     return tasks
+
 
 @app.get("/tasks/{task_id}")
 def get_task(task_id: int):
@@ -17,13 +24,15 @@ def get_task(task_id: int):
             return task
     raise HTTPException(status_code=404, detail="Task not found")
 
+
 @app.post("/tasks")
-def add_task(task: dict):
+def add_task(task: Task):
     global counter
     new_task = {
         "id": counter,
-        "title": task.get("title"),
-        "owner": task.get("owner")
+        "title": task.title,
+        "owner": task.owner,
+        "priority": task.priority
     }
     tasks.append(new_task)
     counter += 1
